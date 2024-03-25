@@ -38,6 +38,7 @@ public class LiquidContainer : Container, IHazardNotifier
 {
     public bool IsHazardous { get; protected set; }
     public double Pressure { get; protected set; }
+    private double cargoMass;
 
     public LiquidContainer(string serialNumber, double mass, double height, double tareWeight, double depth, double maxPayload, bool isHazardous, double pressure)
         : base(serialNumber, mass, height, tareWeight, depth, maxPayload)
@@ -48,23 +49,30 @@ public class LiquidContainer : Container, IHazardNotifier
 
     public override void LoadCargo(double cargoMass)
     {
-        // WILL COMPLETE LATER
+        if (cargoMass > MaxPayload)
+            throw new OverfillException($"Cargo mass ({cargoMass}kg) exceeds the maximum payload ({MaxPayload}kg) of container {SerialNumber}.");
+
+        if (IsHazardous && cargoMass > MaxPayload * 0.5)
+            throw new OverfillException($"Hazardous cargo cannot exceed 50% of the container's capacity. Container: {SerialNumber}");
+
+        this.cargoMass = cargoMass;
     }
 
     public override void EmptyCargo()
     {
-        // WILL COMPLETE LATER
+        this.cargoMass = 0;
     }
 
     public void NotifyHazard(string containerNumber)
     {
-        // WILL COMPLETE LATER
+        Console.WriteLine($"Hazardous situation detected in container {containerNumber}");
     }
 }
 
 public class GasContainer : Container, IHazardNotifier
 {
     public double Pressure { get; protected set; }
+    private double cargoMass;
 
     public GasContainer(string serialNumber, double mass, double height, double tareWeight, double depth, double maxPayload, double pressure)
         : base(serialNumber, mass, height, tareWeight, depth, maxPayload)
@@ -74,23 +82,27 @@ public class GasContainer : Container, IHazardNotifier
 
     public override void LoadCargo(double cargoMass)
     {
-        // WILL COMPLETE LATER
+        if (cargoMass > MaxPayload)
+            throw new OverfillException($"Cargo mass ({cargoMass}kg) exceeds the maximum payload ({MaxPayload}kg) of container {SerialNumber}.");
+
+        this.cargoMass = cargoMass;
     }
 
     public override void EmptyCargo()
     {
-        // WILL COMPLETE LATER
+        this.cargoMass *= 0.95; 
     }
 
     public void NotifyHazard(string containerNumber)
     {
-        // WILL COMPLETE LATER
+        Console.WriteLine($"Hazardous situation detected in container {containerNumber}");
     }
 }
 
 public class RefrigeratedContainer : Container
 {
     public Dictionary<string, double> TemperatureSettings { get; protected set; }
+    private double cargoMass;
 
     public RefrigeratedContainer(string serialNumber, double mass, double height, double tareWeight, double depth, double maxPayload, Dictionary<string, double> temperatureSettings)
         : base(serialNumber, mass, height, tareWeight, depth, maxPayload)
@@ -100,12 +112,15 @@ public class RefrigeratedContainer : Container
 
     public override void LoadCargo(double cargoMass)
     {
-        // WILL COMPLETE LATER
+        if (cargoMass > MaxPayload)
+            throw new OverfillException($"Cargo mass ({cargoMass}kg) exceeds the maximum payload ({MaxPayload}kg) of container {SerialNumber}.");
+
+        this.cargoMass = cargoMass;
     }
 
     public override void EmptyCargo()
     {
-        // WILL COMPLETE LATER
+        this.cargoMass = 0;
     }
 }
 
@@ -128,31 +143,69 @@ public class ContainerShip
 
     public void LoadContainer(Container container)
     {
-        // WILL COMPLETE LATER
+        if (Containers.Count >= MaxContainerNum)
+        {
+            Console.WriteLine($"Cannot load container. Maximum container limit ({MaxContainerNum}) reached on ship {ShipName}.");
+            return;
+        }
+
+        double totalWeight = TotalWeight() + container.Mass;
+        if (totalWeight > MaxWeight)
+        {
+            Console.WriteLine($"Cannot load container {container.SerialNumber}. Maximum weight limit ({MaxWeight}kg) reached on ship {ShipName}.");
+            return;
+        }
+
+        Containers.Add(container);
+        Console.WriteLine($"Container {container.SerialNumber} loaded on ship {ShipName}.");
     }
 
     public void UnloadContainer(Container container)
     {
-        // WILL COMPLETE LATER
+        if (Containers.Remove(container))
+            Console.WriteLine($"Container {container.SerialNumber} unloaded from ship {ShipName}.");
+        else
+            Console.WriteLine($"Container {container.SerialNumber} not found on ship {ShipName}.");
     }
 
     public void ReplaceContainer(Container oldContainer, Container newContainer)
     {
-        // WILL COMPLETE LATER
+        int index = Containers.IndexOf(oldContainer);
+        if (index != -1)
+        {
+            Containers[index] = newContainer;
+            Console.WriteLine($"Container {oldContainer.SerialNumber} replaced with {newContainer.SerialNumber} on ship {ShipName}.");
+        }
+        else
+        {
+            Console.WriteLine($"Container {oldContainer.SerialNumber} not found on ship {ShipName}. Replacement failed.");
+        }
     }
 
     public void PrintShipInfo()
     {
-        // WILL COMPLETE LATER
+        Console.WriteLine($"Ship: {ShipName}");
+        Console.WriteLine($"Max Speed: {MaxSpeed} knots");
+        Console.WriteLine($"Max Container Capacity: {MaxContainerNum}");
+        Console.WriteLine($"Max Weight Capacity: {MaxWeight} tons");
+
+        Console.WriteLine("Containers on board:");
+        foreach (var container in Containers)
+        {
+            Console.WriteLine($"- {container.SerialNumber}");
+        }
     }
 
     private double TotalWeight()
     {
-        // WILL COMPLETE LATER
-        return 0;
+        double totalWeight = 0;
+        foreach (var container in Containers)
+        {
+            totalWeight += container.Mass;
+        }
+        return totalWeight;
     }
 }
-
 
 class Program
 {
@@ -168,3 +221,4 @@ class Program
         catch (Exception ex) { Console.WriteLine($"An error occurred: {ex.Message}"); }
     }
 }
+
